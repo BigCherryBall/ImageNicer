@@ -8,4 +8,5 @@ public final class InputParam
     public String mode;
 
     public String format;
+    public boolean help;
 }

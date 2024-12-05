@@ -1,17 +1,59 @@
 package main.java;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public final class Waifu extends ImageModel
 {
-    public static final Waifu instance = new Waifu();
+    public static final Waifu instance;
+    private static final String resourceDir;
+    private static final String model_file;
+    static 
+    {
+        instance = new Waifu();
+        resourceDir = Cfg.sep + "resource" + Cfg.sep + "model" + Cfg.sep + "waifu";
+        model_file = Cfg.tmp_dir + Cfg.sep + "model" + Cfg.sep + "waifu" + Cfg.sep + "waifu.exe";
+        File tempDir = new File(Cfg.tmp_dir, "model" + Cfg.sep + "waifu"); 
+        if (!tempDir.exists()) 
+        {
+            tempDir.mkdirs();
+        }
+        try 
+        {
+            extractResources(resourceDir, tempDir);
+        } 
+        catch (IOException e) 
+        {
+            e.printStackTrace();
+        }
+    }
+
+    
+
+    private Waifu()
+    {
+        
+    }
 
     @Override
-    public String processImage(InputParam req, String input, String output)
+    public String processImage(InputParam req, String input, String output) throws ImageException
     {
-        return "";
+        ProcessBuilder processBuilder = new ProcessBuilder(this.getCmdList(req, input, output));
+        processBuilder.inheritIO();
+        try
+        {
+            Process process = processBuilder.start();
+            int exitCode = process.waitFor();
+            System.out.println("Command executed with exit code: " + exitCode);
+        }
+        catch(IOException | InterruptedException e)
+        {
+            throw ImageException.process_error;
+        }
+        
+        return output;
     }
 
     @Override
@@ -74,12 +116,23 @@ public final class Waifu extends ImageModel
         }
 
         command = new ArrayList<>();
+        command.add(Waifu.model_file);
         command.add("-i");
         command.add(param.input);
         command.add("-o");
         command.add(param.output);
         command.add("-f");
         command.add(param.format);
+        if(param.format.equals(WaifuParam.format_jpg))
+        {
+            command.add("-q");
+            command.add("100");
+        }
+        else if(param.format.equals(WaifuParam.format_png))
+        {
+            command.add("-c");
+            command.add("9");
+        }
         command.add("-m");
         command.add(param.mode);
 
