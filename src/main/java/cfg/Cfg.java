@@ -1,4 +1,4 @@
-package main.java;
+package main.java.cfg;
 
 import java.io.File;
 

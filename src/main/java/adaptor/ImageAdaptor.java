@@ -1,4 +1,10 @@
-package main.java;
+package main.java.adaptor;
+
+import main.java.cfg.Cfg;
+import main.java.ImageException;
+import main.java.exception.ProcessImgTask;
+import main.java.manager.ImgOverNotify;
+import main.java.manager.ModelManager;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -9,7 +15,7 @@ import javax.imageio.ImageIO;
 
 public final class ImageAdaptor implements ImgOverNotify
 {
-    public static final String TMP_DIR = Cfg.tmp_dir + Cfg.sep + "temp";
+    public static final String TMP_DIR = Cfg.tmp_dir + "temp\\";
     public static final int MAX_IMG_SIZE = 4096 * 4096; // 16M
     public final ModelManager manager;
     private final AdaptorNotify back;
@@ -43,16 +49,19 @@ public final class ImageAdaptor implements ImgOverNotify
         }
 
         /* analyze the command */
+        System.out.println("check if the command is valid");
         try
         {
             model_req = this.analyzeCommand(req.text);
         }
         catch(ImageException e)
         {
+            this.back.callBack(req,  "解析命令错误：" + e.getInfo());
             return true;
         }
 
         /* show help if the cmd is -h or --help */
+        System.out.println("show help if the cmd is -h or --help");
         if(model_req.get(0).help)
         {
             showHelp(req);
@@ -60,13 +69,15 @@ public final class ImageAdaptor implements ImgOverNotify
         }
 
         /* check if the cmd of the model is valid */
+        System.out.println("check if the cmd of the model is valid");
         if(!this.manager.checkReq(model_req))
         {
             return true;
         }
 
         /* get the input image */
-        img_path = this.back.getImgPath();
+        System.out.println("get the input image");
+        img_path = this.back.getImgPath(req);
 
         /* check if the input image is too large before or after processing */
         try
@@ -74,17 +85,18 @@ public final class ImageAdaptor implements ImgOverNotify
             if(isImgTooLarge(img_path, model_req))
             {
                 
-                this.back.callBack();
+                this.back.callBack(req, "图片尺寸太大啦");
                 return true;
             }
         }
         catch(ImageException e)
         {
-            this.back.callBack();
+            this.back.callBack(req, "获取图片文件错误");
             return true;
         }
 
         /* process the image */
+        System.out.println(" process the image");
         task = new ProcessImgTask();
         task.req = req;
         task.reqs = model_req;
@@ -102,9 +114,11 @@ public final class ImageAdaptor implements ImgOverNotify
         InputParam req = null;
         int i = 0;
 
+
+        System.out.println("command=" + command);
         if(command.contains("|"))
         {
-            cmds = command.split("|");
+            cmds = command.split("\\|");
         }
         else
         {
@@ -112,10 +126,13 @@ public final class ImageAdaptor implements ImgOverNotify
             cmds[0] = command;
         }
 
+        for(int j = 0; j < cmds.length; j++)
+            System.out.println("cmds[" + j +"]:" + cmds.length + "  " + cmds[j]);
+
         result = new ArrayList<InputParam>();
         for(i = 0; i < cmds.length; i++)
         {
-            req = this.getReqByCmd(cmds[i]);
+            req = this.getReqByCmd(cmds[i].trim());
             result.add(req);
         }
 
@@ -244,19 +261,19 @@ public final class ImageAdaptor implements ImgOverNotify
     @Override
     public void processOver(ImgNicerReq req, String output)
     {
-
+        this.back.callBack(req, output);
     }
 
     @Override
-    public void processError(ImageException e) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'processError'");
+    public void processError(ImgNicerReq req, ImageException e)
+    {
+        this.back.callBack(req, e.getInfo());
     }
 
     private synchronized String getOutImgPath()
     {
         this.imgae_idx++;
-        return TMP_DIR + Cfg.sep + "out_" + this.imgae_idx + ".png";
+        return TMP_DIR + "out_" + this.imgae_idx + ".png";
     }
 
     private static boolean isImgTooLarge(String imgPath, List<InputParam> reqs) throws ImageException

@@ -1,4 +1,4 @@
-package main.java;
+package main.java.adaptor;
 
 public final class ImgNicerReq
 {

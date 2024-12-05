@@ -1,5 +1,7 @@
 package main.java;
 
+import main.java.manager.model.waifu.WaifuParam;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -7,7 +9,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
-import static main.java.Cfg.waifu2x_converter;
+import static main.java.cfg.Cfg.waifu2x_converter;
 
 public class Main 
 {

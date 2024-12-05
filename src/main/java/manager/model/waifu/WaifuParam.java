@@ -1,4 +1,4 @@
-package main.java;
+package main.java.manager.model.waifu;
 
 public final class WaifuParam
 {

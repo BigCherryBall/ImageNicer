@@ -1,4 +1,9 @@
-package main.java;
+package main.java.manager.model;
+
+import main.java.cfg.Cfg;
+import main.java.ImageException;
+import main.java.adaptor.InputParam;
+import main.java.manager.ModelManager;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -16,13 +21,18 @@ public abstract class ImageModel
 
     public abstract boolean isMe(String name);
 
-    protected static final void extractResources(String resourceDir, File targetDir) throws IOException 
+    protected static void extractResources(String resourceDir, File targetDir) throws IOException
     {
         // 获取 JAR 文件中该路径下所有资源
         Enumeration<URL> resources = ModelManager.class.getClassLoader().getResources(resourceDir);
 
-        while (resources.hasMoreElements()) {
+        System.out.println("resource:" + resources);
+
+        while (resources.hasMoreElements())
+        {
+
             URL resourceUrl = resources.nextElement();
+            System.out.println("url=" + resourceUrl.getFile().toString());
             File resourceFile = new File(resourceUrl.getFile());
 
             // 如果是目录，递归调用

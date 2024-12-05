@@ -1,20 +1,34 @@
-package main.java;
+package main.java.manager.model.waifu;
+
+import main.java.cfg.Cfg;
+import main.java.ImageException;
+import main.java.adaptor.InputParam;
+import main.java.exception.ProcessImgTask;
+import main.java.manager.model.ImageModel;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 
 public final class Waifu extends ImageModel
 {
     public static final Waifu instance;
     private static final String resourceDir;
     private static final String model_file;
+
+    private final ScheduledExecutorService scheduler;
+    private ScheduledFuture<?> futureTask = null;
+
+    private static final String exe = "D:\\code\\Projects\\java\\image\\image\\src\\main\\resource\\model\\waifu\\waifu2x-converter-cpp_waifu2xEX.exe";
     static 
     {
         instance = new Waifu();
         resourceDir = Cfg.sep + "resource" + Cfg.sep + "model" + Cfg.sep + "waifu";
-        model_file = Cfg.tmp_dir + Cfg.sep + "model" + Cfg.sep + "waifu" + Cfg.sep + "waifu.exe";
+        model_file = Cfg.tmp_dir + "model" + Cfg.sep + "waifu" + Cfg.sep + "waifu2x-converter-cpp_waifu2xEX.exe";
         File tempDir = new File(Cfg.tmp_dir, "model" + Cfg.sep + "waifu"); 
         if (!tempDir.exists()) 
         {
@@ -22,6 +36,7 @@ public final class Waifu extends ImageModel
         }
         try 
         {
+            System.out.println("resourceDir=" + resourceDir);
             extractResources(resourceDir, tempDir);
         } 
         catch (IOException e) 
@@ -30,28 +45,52 @@ public final class Waifu extends ImageModel
         }
     }
 
-    
+
+    public <T> T getInstace()
+    {
+
+    }
 
     private Waifu()
     {
-        
+        scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
     @Override
     public String processImage(InputParam req, String input, String output) throws ImageException
     {
-        ProcessBuilder processBuilder = new ProcessBuilder(this.getCmdList(req, input, output));
+
+        List<String> cmdList = this.getCmdList(req, input, output);
+        System.out.println("cmd list:" + cmdList.toString() );
+        ProcessBuilder processBuilder = new ProcessBuilder(cmdList);
         processBuilder.inheritIO();
+        processBuilder.directory(new File("D:\\code\\Projects\\java\\image\\image\\src\\main\\resource\\model\\waifu\\"));
         try
         {
             Process process = processBuilder.start();
+            if(this.futureTask != null && !this.futureTask.isDone())
+            {
+                this.futureTask.cancel(true);
+            }
+            this.futureTask = scheduler.schedule(process::destroy, 30L, java.util.concurrent.TimeUnit.SECONDS);
             int exitCode = process.waitFor();
             System.out.println("Command executed with exit code: " + exitCode);
+            if(!futureTask.isDone())
+            {
+                this.futureTask.cancel(false);
+            }
+            if(exitCode!= 0)
+            {
+                throw ImageException.process_error;
+            }
         }
         catch(IOException | InterruptedException e)
         {
             throw ImageException.process_error;
         }
+
+
+
         
         return output;
     }
@@ -116,7 +155,7 @@ public final class Waifu extends ImageModel
         }
 
         command = new ArrayList<>();
-        command.add(Waifu.model_file);
+        command.add(exe);
         command.add("-i");
         command.add(param.input);
         command.add("-o");
@@ -149,5 +188,10 @@ public final class Waifu extends ImageModel
 
         return command;
     }
+
+
+
+
+}
     
 }

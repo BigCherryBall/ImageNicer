@@ -1,12 +1,11 @@
-package main.java;
+package main.java.manager;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URL;
-import java.util.Enumeration;
+import main.java.*;
+import main.java.adaptor.InputParam;
+import main.java.exception.ProcessImgTask;
+import main.java.manager.model.ImageModel;
+import main.java.manager.model.waifu.Waifu;
+
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -25,6 +24,8 @@ public final class ModelManager implements Runnable
         (
             Waifu.instance
         );
+        Thread thread = new Thread(this);
+        thread.start();
     }
 
     public boolean checkReq(List<InputParam> reqs)
@@ -65,6 +66,7 @@ public final class ModelManager implements Runnable
         try 
         {
             queue.put(task);
+            System.out.println("ModelManager: " + task.input + " added to queue");
         } 
         catch (InterruptedException e) 
         {
@@ -94,7 +96,6 @@ public final class ModelManager implements Runnable
             }
 
             last_img = task.input;
-            output_img = task.output;
             cmd_size = task.reqs.size();
 
             for(InputParam req : task.reqs)
@@ -122,7 +123,7 @@ public final class ModelManager implements Runnable
                     }
                     catch(ImageException e)
                     {
-                        this.back.processError(e);
+                        this.back.processError(task.req, e);
                         error = true;
                     }
                     
