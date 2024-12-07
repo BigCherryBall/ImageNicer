@@ -1,6 +1,6 @@
 package main.java.manager;
 
-import main.java.*;
+import main.java.ImageException;
 import main.java.adaptor.InputParam;
 import main.java.exception.ProcessImgTask;
 import main.java.manager.model.ImageModel;
@@ -15,6 +15,7 @@ public final class ModelManager implements Runnable
     private final ImgOverNotify back;
     private final List<ImageModel> models;
     private final BlockingQueue<ProcessImgTask> queue;
+    private ImageModel default_model;
     
     public ModelManager(ImgOverNotify back)
     {
@@ -22,37 +23,19 @@ public final class ModelManager implements Runnable
         this.queue = new LinkedBlockingQueue<>(4);
         models = List.of
         (
-            Waifu.instance
+            Waifu.getInstance()
         );
+
+        this.default_model = models.get(0);
         Thread thread = new Thread(this);
         thread.start();
     }
 
-    public boolean checkReq(List<InputParam> reqs)
+    public boolean checkReq(List<InputParam> reqs) throws ImageException
     {
-        boolean checked = false;
-
         for (InputParam req : reqs) 
         {
-            checked = false;
-            for (ImageModel model : this.models) 
-            {
-                if(!model.isMe(req.model))
-                {
-                    continue;
-                }
-
-                if(model.checkCmd(req))
-                {
-                    checked = true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            if(!checked)
+            if(!this.checkInput(req))
             {
                 return false;
             }
@@ -144,6 +127,89 @@ public final class ModelManager implements Runnable
             this.back.processOver(task.req, last_img);
         }
         
+    }
+
+    private boolean checkInput(InputParam input) throws ImageException
+    {
+        int scale = 1;
+        int noise = 2;
+        int tmp = 0;
+        boolean model_checked = false;
+        boolean mode_checked = false;
+
+        if(input.model == null || input.model.isEmpty())
+        {
+            input.model = this.default_model.getName();
+            model_checked = true;
+        }
+        else
+        {
+            for (ImageModel model : this.models) 
+            {
+                if(!model.isMe(input.model))
+                {
+                    continue;
+                }
+
+                model_checked = true;
+            }
+        }
+        if(!model_checked)
+        {
+            throw ImageException.mode_error;
+        }
+
+        if(input.mode == null || input.mode.isEmpty())
+        {
+            input.scale = 1;
+            input.noise = 0;
+            input.mode = "";
+            mode_checked = true;
+        }
+        else
+        {
+            
+            if(input.mode.equals("s"))
+            {
+                tmp = scale;
+            }
+            else if(input.mode.equals("n"))
+            {
+                tmp = noise;
+            }
+            else if(input.mode.equals("sn") || input.mode.equals("ns"))
+            {
+                tmp = scale | noise;
+            }
+            else
+            {
+                throw ImageException.mode_error;
+            }
+
+            if((tmp & scale) == scale)
+            {
+                if(input.scale < 0.1f || input.scale > 10f)
+                {
+                    throw ImageException.scale_error;
+                }
+                mode_checked = true;
+            }
+
+            if((tmp & noise) == noise)
+            {
+                if(input.noise < 0 || input.noise > 4)
+                {
+                    throw ImageException.noise_error;
+                }
+                mode_checked = true;
+            }
+        }
+        if(!mode_checked)
+        {
+            throw ImageException.mode_error;
+        }
+
+        return true;
     }
 }
 

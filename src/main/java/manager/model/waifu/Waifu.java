@@ -3,7 +3,6 @@ package main.java.manager.model.waifu;
 import main.java.cfg.Cfg;
 import main.java.ImageException;
 import main.java.adaptor.InputParam;
-import main.java.exception.ProcessImgTask;
 import main.java.manager.model.ImageModel;
 
 import java.io.File;
@@ -16,39 +15,34 @@ import java.util.concurrent.ScheduledFuture;
 
 public final class Waifu extends ImageModel
 {
-    public static final Waifu instance;
+    private static Waifu instance;
     private static final String resourceDir;
-    private static final String model_file;
+    private static final File waifu_dir;
+    private static final String waifu_exe_file_path;
 
     private final ScheduledExecutorService scheduler;
     private ScheduledFuture<?> futureTask = null;
 
-    private static final String exe = "D:\\code\\Projects\\java\\image\\image\\src\\main\\resource\\model\\waifu\\waifu2x-converter-cpp_waifu2xEX.exe";
+    //private static final String exe = "D:\\code\\Projects\\java\\image\\image\\src\\main\\resource\\model\\waifu\\waifu2x-converter-cpp_waifu2xEX.exe";
     static 
     {
-        instance = new Waifu();
-        resourceDir = Cfg.sep + "resource" + Cfg.sep + "model" + Cfg.sep + "waifu";
-        model_file = Cfg.tmp_dir + "model" + Cfg.sep + "waifu" + Cfg.sep + "waifu2x-converter-cpp_waifu2xEX.exe";
-        File tempDir = new File(Cfg.tmp_dir, "model" + Cfg.sep + "waifu"); 
-        if (!tempDir.exists()) 
+        resourceDir = "model" + Cfg.sep + "waifu";
+        String waifu_dir_path = Cfg.tmp_dir + "model" + Cfg.sep + "waifu" + Cfg.sep;
+        waifu_dir = new File(waifu_dir_path);
+        waifu_exe_file_path = waifu_dir_path + "waifu2x-converter-cpp_waifu2xEX.exe";
+        if (!waifu_dir.exists()) 
         {
-            tempDir.mkdirs();
+            waifu_dir.mkdirs();
         }
         try 
         {
-            System.out.println("resourceDir=" + resourceDir);
-            extractResources(resourceDir, tempDir);
+            System.out.println("resourceDir=%s, waifu_dir=%s".formatted(resourceDir, waifu_dir_path));
+            extractResources(resourceDir, waifu_dir);
         } 
         catch (IOException e) 
         {
             e.printStackTrace();
         }
-    }
-
-
-    public <T> T getInstace()
-    {
-
     }
 
     private Waifu()
@@ -64,7 +58,7 @@ public final class Waifu extends ImageModel
         System.out.println("cmd list:" + cmdList.toString() );
         ProcessBuilder processBuilder = new ProcessBuilder(cmdList);
         processBuilder.inheritIO();
-        processBuilder.directory(new File("D:\\code\\Projects\\java\\image\\image\\src\\main\\resource\\model\\waifu\\"));
+        processBuilder.directory(waifu_dir);
         try
         {
             Process process = processBuilder.start();
@@ -112,7 +106,13 @@ public final class Waifu extends ImageModel
         WaifuParam param = new WaifuParam();
         param.input = input;
         param.output = output;
-        param.mode = req.mode;
+        switch (req.mode) 
+        {
+            case "n" -> param.mode = WaifuParam.mode_noise;
+            case "s" -> param.mode = WaifuParam.mode_scale;
+            case "ns", "sn" -> param.mode = WaifuParam.mode_scale_noise;
+            default-> throw ImageException.mode_error;
+        }
         param.noise = req.noise;
         param.scale = req.scale;
         param.format = WaifuParam.format_png;
@@ -135,7 +135,7 @@ public final class Waifu extends ImageModel
         {
             case WaifuParam.mode_scale_noise -> tmp |= noise | scale;
             case WaifuParam.mode_noise -> tmp |= noise;
-            case WaifuParam.mode_scale -> tmp |=  scale;
+            case WaifuParam.mode_scale -> tmp |= scale;
             default -> throw ImageException.mode_error;
         }
 
@@ -148,14 +148,14 @@ public final class Waifu extends ImageModel
         }
         if((tmp & scale) != 0)
         {
-            if(param.noise > WaifuParam.max_scale || param.noise < WaifuParam.min_scale)
+            if(param.scale > WaifuParam.max_scale || param.scale < WaifuParam.min_scale)
             {
                 throw ImageException.scale_error;
             }
         }
 
         command = new ArrayList<>();
-        command.add(exe);
+        command.add(waifu_exe_file_path);
         command.add("-i");
         command.add(param.input);
         command.add("-o");
@@ -165,7 +165,7 @@ public final class Waifu extends ImageModel
         if(param.format.equals(WaifuParam.format_jpg))
         {
             command.add("-q");
-            command.add("100");
+            command.add("101");
         }
         else if(param.format.equals(WaifuParam.format_png))
         {
@@ -189,9 +189,23 @@ public final class Waifu extends ImageModel
         return command;
     }
 
+    @Override
+    public String getName()
+    {
+        return "waifu";
+    }
+
+    public static Waifu getInstance()
+    {
+        if(instance == null)
+        {
+            instance = new Waifu();
+        }
+        return instance;
+    }
+
 
 
 
 }
     
-}

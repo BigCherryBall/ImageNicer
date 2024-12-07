@@ -15,8 +15,10 @@ import javax.imageio.ImageIO;
 
 public final class ImageAdaptor implements ImgOverNotify
 {
-    public static final String TMP_DIR = Cfg.tmp_dir + "temp\\";
+    public static final String TMP_DIR = Cfg.tmp_dir + "temp" + Cfg.sep;
     public static final int MAX_IMG_SIZE = 4096 * 4096; // 16M
+    private static final int ERROR_CODE = 1;
+    private static final int SUCCESS_CODE = 0;
     public final ModelManager manager;
     private final AdaptorNotify back;
     private int imgae_idx = 0;
@@ -56,7 +58,7 @@ public final class ImageAdaptor implements ImgOverNotify
         }
         catch(ImageException e)
         {
-            this.back.callBack(req,  "解析命令错误：" + e.getInfo());
+            this.back.callBack(req, ERROR_CODE, "解析命令错误：" + e.getInfo());
             return true;
         }
 
@@ -70,9 +72,16 @@ public final class ImageAdaptor implements ImgOverNotify
 
         /* check if the cmd of the model is valid */
         System.out.println("check if the cmd of the model is valid");
-        if(!this.manager.checkReq(model_req))
+        try 
         {
-            return true;
+            if(!this.manager.checkReq(model_req))
+            {
+                return true;
+            }
+        } 
+        catch (ImageException e) 
+        {
+            e.printStackTrace();
         }
 
         /* get the input image */
@@ -85,13 +94,13 @@ public final class ImageAdaptor implements ImgOverNotify
             if(isImgTooLarge(img_path, model_req))
             {
                 
-                this.back.callBack(req, "图片尺寸太大啦");
+                this.back.callBack(req, ERROR_CODE, "图片尺寸太大啦");
                 return true;
             }
         }
         catch(ImageException e)
         {
-            this.back.callBack(req, "获取图片文件错误");
+            this.back.callBack(req, ERROR_CODE, e.getInfo());
             return true;
         }
 
@@ -261,13 +270,13 @@ public final class ImageAdaptor implements ImgOverNotify
     @Override
     public void processOver(ImgNicerReq req, String output)
     {
-        this.back.callBack(req, output);
+        this.back.callBack(req, SUCCESS_CODE, output);
     }
 
     @Override
     public void processError(ImgNicerReq req, ImageException e)
     {
-        this.back.callBack(req, e.getInfo());
+        this.back.callBack(req, ERROR_CODE, e.getInfo());
     }
 
     private synchronized String getOutImgPath()
@@ -313,6 +322,8 @@ public final class ImageAdaptor implements ImgOverNotify
             // 获取宽度和高度
             int width = img.getWidth();
             int height = img.getHeight();
+
+            System.out.println("get image succ : width=" + width + " height=" + height);
             
             // 返回像素数（长*宽）
             return width * height;

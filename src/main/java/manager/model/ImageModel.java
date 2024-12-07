@@ -21,12 +21,14 @@ public abstract class ImageModel
 
     public abstract boolean isMe(String name);
 
+    public abstract String getName();
+
     protected static void extractResources(String resourceDir, File targetDir) throws IOException
     {
         // 获取 JAR 文件中该路径下所有资源
         Enumeration<URL> resources = ModelManager.class.getClassLoader().getResources(resourceDir);
 
-        System.out.println("resource:" + resources);
+        System.out.println("class path:" + ModelManager.class.getClassLoader().getResource(resourceDir+"/test.txt").getPath());
 
         while (resources.hasMoreElements())
         {
@@ -52,7 +54,7 @@ public abstract class ImageModel
                     if (inputStream != null) {
                         File targetFile = new File(targetDir, resourceFile.getName());
                         try (OutputStream outputStream = new FileOutputStream(targetFile)) {
-                            byte[] buffer = new byte[1024];
+                            byte[] buffer = new byte[4096];
                             int bytesRead;
                             while ((bytesRead = inputStream.read(buffer)) != -1) {
                                 outputStream.write(buffer, 0, bytesRead);
